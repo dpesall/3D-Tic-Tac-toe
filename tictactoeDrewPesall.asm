@@ -27,10 +27,13 @@ continueMessage:	.asciiz		"\nContinue playing?(y/n): "
 newGameMessage: 	.asciiz		"\nStart a new game?(y/n): "
 validMessage:		.asciiz		"\nPlease select a valid option."
 
-selectPieceMessage: .asciiz		"\nWhat would you like to play as?(x/o): "
-selectPieceError:	.asciiz		"\nPlease select a valid piece."
+playerSelectPieceMessage: .asciiz		"\nWhat would you like to play as?(x/o): "
+playerSelectPieceError:	.asciiz		"\nPlease select a valid piece."
 
 occupiedPosition:	.asciiz		"\nThere is already a piece there."
+
+computerFirstO:		.asciiz		"\nThe computer went first. You are playing as 'X'"
+computerFirstX:		.asciiz		"\nThe computer went first. You are playing as 'O'"
 
 pieceX:     		.byte 'x'
 pieceO:     		.byte 'o'
@@ -55,7 +58,14 @@ index2:				.byte	'p'
 main:
 
 jal initialDisplay
-jal selectPiece
+
+li $a1, 2  #Here you set $a1 to the max bound.
+li $v0, 42  #generates the random number.
+syscall
+
+beqz	$a0, computerSelectPiece
+
+jal 	playerSelectPiece
 
 li $v0, 10
 	syscall
@@ -81,10 +91,71 @@ ble		$t4, 64, resetGameBoard
 
 j main
 
-selectPiece:
+computerSelectPiece:
+
+li		$v0, 4
+la		$a0, computerFirstO
+syscall
+
+j computerTurnO
+
+
+computerTurnO:
+# Printing Board
+li 		$v0, 4
+la 		$a0, gameBoard
+syscall
+
+# Selecting Grid
+jal 	selectGridComputer
+
+
+# Selecting Index
+jal		selectIndexComputer
+
+# Printing Board
+lh 		$t0, zero
+lh 		$t1, zero
+lh		$t2, zero
+lh 		$t3, zero
+lh		$t4, zero
+
+lb		$t1, ($s6) 
+lb     	$t2, ($s7) 
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+li		$t2, 'O'
+
+# Checks to see if there is already a piece there.
+lb		$t9, gameBoard($t1)
+bne		$t9, '.', occupiedO
+
+sb		$t2, gameBoard($t1)
+
+li		$v0, 4
+la		$a0, gameBoard
+syscall
+
+jal		gameLoopX
+
+playerSelectPiece:
 #Display prompt
 li      $v0, 4
-la      $a0, selectPieceMessage
+la      $a0, playerSelectPieceMessage
 syscall
 
 #Enter your desired piece
@@ -93,6 +164,10 @@ li  	$v0, 8
 la  	$a0, userInput
 li  	$a1, 10
 syscall
+
+j start
+
+start:
 
 #Compare
 la     	$s2, pieceX
@@ -105,10 +180,48 @@ lb		$t2, ($s4)
 beq		$t2,$t3,gameLoopO
 
 li		$v0, 4
-la		$a0, selectPieceError
+la		$a0, playerSelectPieceError
 syscall
 
-j		selectPiece
+j		playerSelectPiece
+
+jr 		$ra
+
+selectGridComputer:
+
+#Display prompt
+li      $v0, 4
+la      $a0, gridMessage
+syscall
+
+#Enter your desired grid
+move    $a0,$t2
+li  	$v0, 8
+la  	$a0, userInputGrid
+li  	$a1, 10
+syscall
+
+#Compare
+la     	$s2, grid0
+lb     	$t2, ($s2)
+la     	$s6, userInputGrid
+lb     	$t3, ($s6)
+beq    	$t2,$t3,test
+la		$s4, grid1
+lb		$t2, ($s4)
+beq		$t2,$t3,test
+la		$s4, grid2
+lb		$t2, ($s4)
+beq		$t2,$t3,test
+la		$s4, grid3
+lb		$t2, ($s4)
+beq		$t2,$t3,test
+
+li		$v0, 4
+la		$a0, gridError
+syscall
+
+j		selectGridComputer
 
 jr 		$ra
 
@@ -252,6 +365,32 @@ j		newGame
 
 jr 		$ra
 
+selectIndexComputer: 
+
+# Select Index
+li      $v0, 4
+la      $a0, indexMessage
+syscall
+
+#Enter your desired choice
+move    $a0,$t2
+li  	$v0, 8
+la  	$a0, userInput
+li  	$a1, 10
+syscall
+
+#Compare
+la     	$s2, index1
+lb     	$t2, ($s2)
+la     	$s7, userInput
+lb     	$t3, ($s7)
+blt    	$t3,$t2,indexRetry
+la		$s4, index2
+lb		$t2, ($s4)
+bgt		$t3,$t2,indexRetry
+
+jr 		$ra
+
 selectIndex:
 # Select Index
 li      $v0, 4
@@ -338,7 +477,7 @@ la		$a0, gameBoard
 syscall
 
 # Continue?
-jal		continueGameX
+jal		continueGameO
 
 jr 		$ra
 
@@ -409,6 +548,6 @@ la		$a0, gameBoard
 syscall
 
 # Continue?
-jal		continueGameO
+jal		continueGameX
 
 jr 		$ra
