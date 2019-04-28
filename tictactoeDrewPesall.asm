@@ -66,7 +66,7 @@ comb: 	 .ascii  "0b0c0d 0f0k0p 0e0i0m 1a2a3a 1b2c3d 1e2i3m 1f2k3p"      # 0a
          .ascii  "2m2n2p 2c2g2k 0o1o3o 0m1n3p                     "      # 2o
          .ascii  "2m2n2o 2d2h2l 2a2f2k 0p1p3p                     "      # 2p
          .ascii  "3b3c3d 3f3k3p 3e3i3m 0a1a2a 0d1c2b 0p1k2f 0m1i2e"      # 3a
-         .ascii  "3a3c3d 3f3j3n 0b1b2b 0n1j2b                     "      # 3b
+         .ascii  "3a3c3d 3f3j3n 0b1b2b 0n1j2f                     "      # 3b
          .ascii  "3a3b3d 3g3k3o 0c1c2c 0o1k2g                     "      # 3c
          .ascii  "3a3b3c 3h3l3p 3g3j3m 0d1d2d 0a1b2c 0m1j2g 0p1l2h"      # 3d
          .ascii  "3a3i3m 3f3g3h 0e1e2e 0h1g2f                     "      # 3e
@@ -85,12 +85,17 @@ comb: 	 .ascii  "0b0c0d 0f0k0p 0e0i0m 1a2a3a 1b2c3d 1e2i3m 1f2k3p"      # 0a
 gridMessage:		.asciiz		"\nSelect a grid(0-3): "
 gridError:			.asciiz		"\nPlease select a valid grid."
 
+testGrid:			.word 	0
+testIndex:			.byte	'a'
+
 indexMessage:		.asciiz		"\nSelect an index(a-p): "
 indexError:			.asciiz		"\nPlease select a valid index."
 
 continueMessage:	.asciiz		"\nContinue playing?(y/n): "
 newGameMessage: 	.asciiz		"\nStart a new game?(y/n): "
 validMessage:		.asciiz		"\nPlease select a valid option."
+
+madeIt:				.asciiz		"\nMade it"
 
 playerSelectPieceMessage: 	.asciiz		"\nWhat would you like to play as?(x/o): "
 playerSelectPieceError:		.asciiz		"\nPlease select a valid piece."
@@ -140,27 +145,13 @@ occupiedPositionMessage: .asciiz "\nThere is already a piece there."
 
 userInput:			.space	4
 userInputGrid:		.space 	4
-userInputCell:		.space 	4
+userInputIndex:		.space 	4
 
-userPreviousGrid1:	.word	0
-userPreviousGrid2:	.word	0
-userPreviousGrid3:	.word	0
-userPreviousGrid4:	.word	0
+userPreviousGrid:	.word	0
+userPreviousIndex:	.word   0
 
-userPreviousCell1:	.word   0
-userPreviousCell2:	.word   0
-userPreviousCell3:	.word   0
-userPreviousCell4:	.word   0
-
-computerPreviousGrid1:	.word	0
-computerPreviousGrid2:	.word	0
-computerPreviousGrid3:	.word	0
-computerPreviousGrid4:	.word	0
-
-computerPreviousCell1:	.word	0
-computerPreviousCell2:	.word	0
-computerPreviousCell3:	.word	0
-computerPreviousCell4:	.word	0
+computerPreviousGrid:	.word	0
+computerPreviousIndex:	.word	0
 
 index1:				.byte	'a'
 index2:				.byte	'p'
@@ -256,6 +247,8 @@ bne		$t9, '.', computerTurnO
 
 sb		$t2, gameBoard($t1)
 
+jal		readCombComputerO
+
 jal		gameLoopX
 
 computerTurnX:
@@ -299,6 +292,8 @@ lb		$t9, gameBoard($t1)
 bne		$t9, '.', computerTurnX
 
 sb		$t2, gameBoard($t1)
+
+jal		readCombComputerO
 
 jal		gameLoopO
 
@@ -598,13 +593,6 @@ syscall
 
 jr		$ra
 
-winConditionPlayer:
-
-#0a
-beq		$s0, 'X', playerWinScreen
-
-jr		$ra
-
 
 selectIndexComputer: 
 
@@ -651,14 +639,14 @@ syscall
 #Enter your desired choice
 move    $a0,$t2
 li  	$v0, 8
-la  	$a0, userInput
+la  	$a0, userInputIndex
 li  	$a1, 10
 syscall
 
 #Compare
 la     	$s2, index1
 lb     	$t2, ($s2)
-la     	$s7, userInput
+la     	$s7, userInputIndex
 lb     	$t3, ($s7)
 blt    	$t3,$t2,indexRetry
 la		$s4, index2
@@ -723,13 +711,13 @@ li		$t2, 'X'
 lb		$t9, gameBoard($t1)
 bne		$t9, '.', occupiedX
 
-jal		winConditionPlayer
-
 sb		$t2, gameBoard($t1)
 
 li		$v0, 4
 la		$a0, gameBoard
 syscall
+
+jal		readCombX ###########################################
 
 # Continue?
 jal		continueGameO
@@ -774,11 +762,14 @@ lh		$t2, zero
 lh 		$t3, zero
 lh		$t4, zero
 
+# $s6 = grid
+# $s7 = cell
 lb		$t1, ($s6) 
 lb     	$t2, ($s7) 
 sub		$t1, $t1, 48  # Grid
 sub		$t2, $t2, 'a' # Index
 
+# Equation: $t0 = (cell÷4)×16 + grid×4 + cell%4
 div		$t0, $t2, 4
 mul		$t0, $t0, 16
 
@@ -804,7 +795,1134 @@ li		$v0, 4
 la		$a0, gameBoard
 syscall
 
+jal		readCombO
+
 # Continue?
 jal		continueGameX
 
 jr 		$ra
+
+
+winScreenX:
+li		$v0, 4
+la		$a0, xWon
+syscall
+
+j		newGame
+
+winScreenO:
+li		$v0, 4
+la		$a0, oWon
+syscall
+
+j		newGame
+
+readCombX: # $t0 = grid		$t1 = index
+# Equation: (Grid×16+Index)×48
+lb 		$t0, userInputGrid
+sub		$t0, $t0, 48
+
+lb		$t1, userInputIndex
+sub		$t1, $t1, 'a'
+
+mul		$t2, $t0, 16
+add		$t2, $t2, $t1
+mul		$t2, $t2, 48
+
+lb 		$t3, comb($t2)
+
+add		$t2, $t2, 1
+lb 		$t4, comb($t2)
+
+# Saving the $t2 offset in # $s5 and $s0
+add		$s5, $t2, $zero
+add		$s0, $t2, $zero
+
+# $t3 = grid
+# $t4 = index
+
+sb		$t3, userPreviousGrid
+sb		$t4, userPreviousIndex
+
+j		winConditionX1
+
+winConditionX1:
+
+lb		$t1, userPreviousGrid 
+lb     	$t2, userPreviousIndex
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'X', winConditionX2
+
+##############################################
+
+add		$s5, $s5, 6
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'X', winConditionX2
+
+#########################################################
+
+add		$s5, $s5, 6
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'X', winConditionX2
+
+#########################################################
+
+add		$s5, $s5, 6
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'X', winConditionX2
+
+#########################################################
+
+add		$s5, $s5, 6
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'X', winConditionX2
+
+#########################################################
+
+add		$s5, $s5, 6
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'X', winConditionX2
+
+#########################################################
+
+add		$s5, $s5, 6
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'X', winConditionX2
+
+j		continueGameO
+
+winConditionX2:
+
+add		$s5, $s5, 1
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'X', winConditionX3
+
+j		continueGameO
+
+winConditionX3:
+
+add		$s5, $s5, 1
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'X', winScreenX
+
+j		continueGameO
+
+##################
+
+readCombO: # $t0 = grid		$t1 = index
+# Equation: (Grid×16+Index)×48
+lb 		$t0, userInputGrid
+sub		$t0, $t0, 48
+
+lb		$t1, userInputIndex
+sub		$t1, $t1, 'a'
+
+mul		$t2, $t0, 16
+add		$t2, $t2, $t1
+mul		$t2, $t2, 48
+
+lb 		$t3, comb($t2)
+
+add		$t2, $t2, 1
+lb 		$t4, comb($t2)
+
+# Saving the $t2 offset in # $s5 and $s0
+add		$s5, $t2, $zero
+add		$s0, $t2, $zero
+
+# $t3 = grid
+# $t4 = index
+
+sb		$t3, userPreviousGrid
+sb		$t4, userPreviousIndex
+
+j		winConditionO1
+
+winConditionO1:
+
+lb		$t1, userPreviousGrid 
+lb     	$t2, userPreviousIndex
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'O', winConditionO2
+
+##############################################
+
+add		$s5, $s5, 6
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'O', winConditionO2
+
+#########################################################
+
+add		$s5, $s5, 6
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'O', winConditionO2
+
+#########################################################
+
+add		$s5, $s5, 6
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'O', winConditionO2
+
+#########################################################
+
+add		$s5, $s5, 6
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'O', winConditionO2
+
+#########################################################
+
+add		$s5, $s5, 6
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'O', winConditionO2
+
+#########################################################
+
+add		$s5, $s5, 6
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'O', winConditionO2
+
+j		continueGameX
+
+winConditionO2:
+
+add		$s5, $s5, 1
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'O', winConditionO3
+
+j		continueGameX
+
+winConditionO3:
+
+add		$s5, $s5, 1
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'O', winScreenO
+
+j		continueGameX
+
+################
+
+readCombX: # $t0 = grid		$t1 = index
+# Equation: (Grid×16+Index)×48
+lb 		$t0, userInputGrid
+sub		$t0, $t0, 48
+
+lb		$t1, userInputIndex
+sub		$t1, $t1, 'a'
+
+mul		$t2, $t0, 16
+add		$t2, $t2, $t1
+mul		$t2, $t2, 48
+
+lb 		$t3, comb($t2)
+
+add		$t2, $t2, 1
+lb 		$t4, comb($t2)
+
+# Saving the $t2 offset in # $s5 and $s0
+add		$s5, $t2, $zero
+add		$s0, $t2, $zero
+
+# $t3 = grid
+# $t4 = index
+
+sb		$t3, userPreviousGrid
+sb		$t4, userPreviousIndex
+
+j		winConditionX1
+
+winConditionX1:
+
+lb		$t1, userPreviousGrid 
+lb     	$t2, userPreviousIndex
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'X', winConditionX2
+
+##############################################
+
+add		$s5, $s5, 6
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'X', winConditionX2
+
+#########################################################
+
+add		$s5, $s5, 6
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'X', winConditionX2
+
+#########################################################
+
+add		$s5, $s5, 6
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'X', winConditionX2
+
+#########################################################
+
+add		$s5, $s5, 6
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'X', winConditionX2
+
+#########################################################
+
+add		$s5, $s5, 6
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'X', winConditionX2
+
+#########################################################
+
+add		$s5, $s5, 6
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'X', winConditionX2
+
+j		continueGameO
+
+winConditionX2:
+
+add		$s5, $s5, 1
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'X', winConditionX3
+
+j		continueGameO
+
+winConditionX3:
+
+add		$s5, $s5, 1
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'X', winScreenX
+
+j		continueGameO
+
+##################
+
+readCombO: # $t0 = grid		$t1 = index
+# Equation: (Grid×16+Index)×48
+lb 		$t0, userInputGrid
+sub		$t0, $t0, 48
+
+lb		$t1, userInputIndex
+sub		$t1, $t1, 'a'
+
+mul		$t2, $t0, 16
+add		$t2, $t2, $t1
+mul		$t2, $t2, 48
+
+lb 		$t3, comb($t2)
+
+add		$t2, $t2, 1
+lb 		$t4, comb($t2)
+
+# Saving the $t2 offset in # $s5 and $s0
+add		$s5, $t2, $zero
+add		$s0, $t2, $zero
+
+# $t3 = grid
+# $t4 = index
+
+sb		$t3, userPreviousGrid
+sb		$t4, userPreviousIndex
+
+j		winConditionO1
+
+winConditionO1:
+
+lb		$t1, userPreviousGrid 
+lb     	$t2, userPreviousIndex
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'O', winConditionO2
+
+##############################################
+
+add		$s5, $s5, 6
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'O', winConditionO2
+
+#########################################################
+
+add		$s5, $s5, 6
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'O', winConditionO2
+
+#########################################################
+
+add		$s5, $s5, 6
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'O', winConditionO2
+
+#########################################################
+
+add		$s5, $s5, 6
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'O', winConditionO2
+
+#########################################################
+
+add		$s5, $s5, 6
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'O', winConditionO2
+
+#########################################################
+
+add		$s5, $s5, 6
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'O', winConditionO2
+
+j		continueGameX
+
+winConditionO2:
+
+add		$s5, $s5, 1
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'O', winConditionO3
+
+j		continueGameX
+
+winConditionO3:
+
+add		$s5, $s5, 1
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'O', winScreenO
+
+j		continueGameX
