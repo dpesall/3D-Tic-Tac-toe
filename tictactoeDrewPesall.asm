@@ -225,6 +225,7 @@ lb		$t1, ($s6)
 lb     	$t2, ($s7) 
 sub		$t1, $t1, 48  # Grid
 sub		$t2, $t2, 'a' # Index
+sb		$t2, computerPreviousIndex
 
 div		$t0, $t2, 4
 mul		$t0, $t0, 16
@@ -271,6 +272,7 @@ lb		$t1, ($s6)
 lb     	$t2, ($s7) 
 sub		$t1, $t1, 48  # Grid
 sub		$t2, $t2, 'a' # Index
+sb		$t2, computerPreviousIndex
 
 div		$t0, $t2, 4
 mul		$t0, $t0, 16
@@ -293,7 +295,7 @@ bne		$t9, '.', computerTurnX
 
 sb		$t2, gameBoard($t1)
 
-jal		readCombComputerO
+jal		readCombComputerX
 
 jal		gameLoopO
 
@@ -366,6 +368,10 @@ xor  $a0, $a0, $a0     # Set a seed number.
 li   $a1, 4           # random number 0 to 15
 li   $v0, 42           # random number generator
 syscall
+
+sb		$a0, computerPreviousGrid
+
+sb		$a0, userInputGrid
 
 beqz	$a0, pgrid0
 beq		$a0, 1, pgrid1
@@ -537,51 +543,67 @@ jr 		$ra
 
 sindexa:
 la		$s7, spota
+sb		$s7, computerPreviousIndex
 jr		$ra
 sindexb:
 la		$s7, spotb
+sb		$s7, computerPreviousIndex
 jr		$ra
 sindexc:
 la		$s7, spotc
+sb		$s7, computerPreviousIndex
 jr		$ra
 sindexd:
 la		$s7, spotd
+sb		$s7, computerPreviousIndex
 jr		$ra
 sindexe:
 la		$s7, spote
+sb		$s7, computerPreviousIndex
 jr		$ra
 sindexf:
 la		$s7, spotf
+sb		$s7, computerPreviousIndex
 jr		$ra
 sindexg:
 la		$s7, spotg
+sb		$s7, computerPreviousIndex
 jr		$ra
 sindexh:
 la		$s7, spoth
+sb		$s7, computerPreviousIndex
 jr		$ra
 sindexi:
 la		$s7, spoti
+sb		$s7, computerPreviousIndex
 jr		$ra
 sindexj:
 la		$s7, spotj
+sb		$s7, computerPreviousIndex
 jr		$ra
 sindexk:
 la		$s7, spotk
+sb		$s7, computerPreviousIndex
 jr		$ra
 sindexl:
 la		$s7, spotl
+sb		$s7, computerPreviousIndex
 jr		$ra
 sindexm:
 la		$s7, spotm
+sb		$s7, computerPreviousIndex
 jr		$ra
 sindexn:
 la		$s7, spotn
+sb		$s7, computerPreviousIndex
 jr		$ra
 sindexo:
 la		$s7, spoto
+sb		$s7, computerPreviousIndex
 jr		$ra
 sindexp:
 la		$s7, spotp
+sb		$s7, computerPreviousIndex
 jr		$ra
 
 
@@ -1371,15 +1393,15 @@ beq		$t9, 'O', winScreenO
 
 j		continueGameX
 
-################
+#############################################
+##################	Computer	###########################
+#############################################
 
-readCombX: # $t0 = grid		$t1 = index
+readCombComputerX: # $t0 = grid		$t1 = index
 # Equation: (Grid×16+Index)×48
-lb 		$t0, userInputGrid
-sub		$t0, $t0, 48
+lb 		$t0, computerPreviousGrid
 
-lb		$t1, userInputIndex
-sub		$t1, $t1, 'a'
+lb		$t1, computerPreviousIndex
 
 mul		$t2, $t0, 16
 add		$t2, $t2, $t1
@@ -1397,15 +1419,15 @@ add		$s0, $t2, $zero
 # $t3 = grid
 # $t4 = index
 
-sb		$t3, userPreviousGrid
-sb		$t4, userPreviousIndex
+sb		$t3, computerPreviousGrid
+sb		$t4, computerPreviousIndex
 
-j		winConditionX1
+j		winConditionComputerX1
 
-winConditionX1:
+winConditionComputerX1:
 
-lb		$t1, userPreviousGrid 
-lb     	$t2, userPreviousIndex
+lb		$t1, ($s6) 
+lb     	$t2, ($s7)
 
 sub		$t1, $t1, 48  # Grid
 sub		$t2, $t2, 'a' # Index
@@ -1425,7 +1447,7 @@ lh 		$t1, offset($t0)
 
 # Checks to see if there is already a piece there
 lb		$t9, gameBoard($t1)
-beq		$t9, 'X', winConditionX2
+beq		$t9, 'X', winConditionComputerX2
 
 ##############################################
 
@@ -1452,7 +1474,7 @@ lh 		$t1, offset($t0)
 
 # Checks to see if there is already a piece there
 lb		$t9, gameBoard($t1)
-beq		$t9, 'X', winConditionX2
+beq		$t9, 'X', winConditionComputerX2
 
 #########################################################
 
@@ -1479,7 +1501,7 @@ lh 		$t1, offset($t0)
 
 # Checks to see if there is already a piece there
 lb		$t9, gameBoard($t1)
-beq		$t9, 'X', winConditionX2
+beq		$t9, 'X', winConditionComputerX2
 
 #########################################################
 
@@ -1506,7 +1528,7 @@ lh 		$t1, offset($t0)
 
 # Checks to see if there is already a piece there
 lb		$t9, gameBoard($t1)
-beq		$t9, 'X', winConditionX2
+beq		$t9, 'X', winConditionComputerX2
 
 #########################################################
 
@@ -1533,7 +1555,7 @@ lh 		$t1, offset($t0)
 
 # Checks to see if there is already a piece there
 lb		$t9, gameBoard($t1)
-beq		$t9, 'X', winConditionX2
+beq		$t9, 'X', winConditionComputerX2
 
 #########################################################
 
@@ -1560,7 +1582,7 @@ lh 		$t1, offset($t0)
 
 # Checks to see if there is already a piece there
 lb		$t9, gameBoard($t1)
-beq		$t9, 'X', winConditionX2
+beq		$t9, 'X', winConditionComputerX2
 
 #########################################################
 
@@ -1587,40 +1609,11 @@ lh 		$t1, offset($t0)
 
 # Checks to see if there is already a piece there
 lb		$t9, gameBoard($t1)
-beq		$t9, 'X', winConditionX2
+beq		$t9, 'X', winConditionComputerX2
 
-j		continueGameO
+j		gameLoopO
 
-winConditionX2:
-
-add		$s5, $s5, 1
-lb 		$t1, comb($s5)
-add		$s5, $s5, 1
-lb 		$t2, comb($s5)
-
-sub		$t1, $t1, 48  # Grid
-sub		$t2, $t2, 'a' # Index
-
-div		$t0, $t2, 4
-mul		$t0, $t0, 16
-
-mul		$t1, $t1, 4
-
-add		$t0, $t0, $t1
-div		$t2, $t2, 4
-mfhi	$t2
-add		$t0, $t2, $t0
-
-mul		$t0, $t0, 2
-lh 		$t1, offset($t0)
-
-# Checks to see if there is already a piece there
-lb		$t9, gameBoard($t1)
-beq		$t9, 'X', winConditionX3
-
-j		continueGameO
-
-winConditionX3:
+winConditionComputerX2:
 
 add		$s5, $s5, 1
 lb 		$t1, comb($s5)
@@ -1645,19 +1638,57 @@ lh 		$t1, offset($t0)
 
 # Checks to see if there is already a piece there
 lb		$t9, gameBoard($t1)
-beq		$t9, 'X', winScreenX
+beq		$t9, 'X', winConditionComputerX3
 
-j		continueGameO
+j		gameLoopO
+
+winConditionComputerX3:
+
+add		$s5, $s5, 1
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'X', winScreenComputerX
+
+j		gameLoopO
+
+winScreenComputerX:
+li		$v0, 4
+la		$a0, gameBoard
+syscall
+
+li		$v0, 4
+la		$a0, xWon
+syscall
+
+j		newGame
+
 
 ##################
 
-readCombO: # $t0 = grid		$t1 = index
+readCombComputerO: # $t0 = grid		$t1 = index
 # Equation: (Grid×16+Index)×48
-lb 		$t0, userInputGrid
-sub		$t0, $t0, 48
-
-lb		$t1, userInputIndex
-sub		$t1, $t1, 'a'
+lb 		$t0, computerPreviousGrid
+lb		$t1, computerPreviousIndex
 
 mul		$t2, $t0, 16
 add		$t2, $t2, $t1
@@ -1668,22 +1699,25 @@ lb 		$t3, comb($t2)
 add		$t2, $t2, 1
 lb 		$t4, comb($t2)
 
+
 # Saving the $t2 offset in # $s5 and $s0
 add		$s5, $t2, $zero
 add		$s0, $t2, $zero
 
+
+
 # $t3 = grid
 # $t4 = index
 
-sb		$t3, userPreviousGrid
-sb		$t4, userPreviousIndex
+sb		$t3, computerPreviousGrid
+sb		$t4, computerPreviousIndex
 
-j		winConditionO1
+j		winConditionComputerO1
 
-winConditionO1:
+winConditionComputerO1:
 
-lb		$t1, userPreviousGrid 
-lb     	$t2, userPreviousIndex
+lb		$t1, ($s6)
+lb     	$t2, ($s7)
 
 sub		$t1, $t1, 48  # Grid
 sub		$t2, $t2, 'a' # Index
@@ -1703,7 +1737,7 @@ lh 		$t1, offset($t0)
 
 # Checks to see if there is already a piece there
 lb		$t9, gameBoard($t1)
-beq		$t9, 'O', winConditionO2
+beq		$t9, 'O', winConditionComputerO2
 
 ##############################################
 
@@ -1730,7 +1764,7 @@ lh 		$t1, offset($t0)
 
 # Checks to see if there is already a piece there
 lb		$t9, gameBoard($t1)
-beq		$t9, 'O', winConditionO2
+beq		$t9, 'O', winConditionComputerO2
 
 #########################################################
 
@@ -1757,7 +1791,7 @@ lh 		$t1, offset($t0)
 
 # Checks to see if there is already a piece there
 lb		$t9, gameBoard($t1)
-beq		$t9, 'O', winConditionO2
+beq		$t9, 'O', winConditionComputerO2
 
 #########################################################
 
@@ -1784,7 +1818,7 @@ lh 		$t1, offset($t0)
 
 # Checks to see if there is already a piece there
 lb		$t9, gameBoard($t1)
-beq		$t9, 'O', winConditionO2
+beq		$t9, 'O', winConditionComputerO2
 
 #########################################################
 
@@ -1811,7 +1845,7 @@ lh 		$t1, offset($t0)
 
 # Checks to see if there is already a piece there
 lb		$t9, gameBoard($t1)
-beq		$t9, 'O', winConditionO2
+beq		$t9, 'O', winConditionComputerO2
 
 #########################################################
 
@@ -1838,7 +1872,7 @@ lh 		$t1, offset($t0)
 
 # Checks to see if there is already a piece there
 lb		$t9, gameBoard($t1)
-beq		$t9, 'O', winConditionO2
+beq		$t9, 'O', winConditionComputerO2
 
 #########################################################
 
@@ -1865,40 +1899,15 @@ lh 		$t1, offset($t0)
 
 # Checks to see if there is already a piece there
 lb		$t9, gameBoard($t1)
-beq		$t9, 'O', winConditionO2
+beq		$t9, 'O', winConditionComputerO2
 
-j		continueGameX
+j		gameLoopX
 
-winConditionO2:
+winConditionComputerO2:
 
-add		$s5, $s5, 1
-lb 		$t1, comb($s5)
-add		$s5, $s5, 1
-lb 		$t2, comb($s5)
-
-sub		$t1, $t1, 48  # Grid
-sub		$t2, $t2, 'a' # Index
-
-div		$t0, $t2, 4
-mul		$t0, $t0, 16
-
-mul		$t1, $t1, 4
-
-add		$t0, $t0, $t1
-div		$t2, $t2, 4
-mfhi	$t2
-add		$t0, $t2, $t0
-
-mul		$t0, $t0, 2
-lh 		$t1, offset($t0)
-
-# Checks to see if there is already a piece there
-lb		$t9, gameBoard($t1)
-beq		$t9, 'O', winConditionO3
-
-j		continueGameX
-
-winConditionO3:
+li		$v0, 4
+la		$a0, madeIt
+syscall
 
 add		$s5, $s5, 1
 lb 		$t1, comb($s5)
@@ -1923,6 +1932,50 @@ lh 		$t1, offset($t0)
 
 # Checks to see if there is already a piece there
 lb		$t9, gameBoard($t1)
-beq		$t9, 'O', winScreenO
+beq		$t9, 'O', winConditionComputerO3
 
-j		continueGameX
+j		gameLoopX
+
+winConditionComputerO3:
+
+li		$v0, 4
+la		$a0, madeIt
+syscall
+
+add		$s5, $s5, 1
+lb 		$t1, comb($s5)
+add		$s5, $s5, 1
+lb 		$t2, comb($s5)
+
+sub		$t1, $t1, 48  # Grid
+sub		$t2, $t2, 'a' # Index
+
+div		$t0, $t2, 4
+mul		$t0, $t0, 16
+
+mul		$t1, $t1, 4
+
+add		$t0, $t0, $t1
+div		$t2, $t2, 4
+mfhi	$t2
+add		$t0, $t2, $t0
+
+mul		$t0, $t0, 2
+lh 		$t1, offset($t0)
+
+# Checks to see if there is already a piece there
+lb		$t9, gameBoard($t1)
+beq		$t9, 'O', winScreenComputerO
+
+j		gameLoopX
+
+winScreenComputerO:
+li		$v0, 4
+la		$a0, gameBoard
+syscall
+
+li		$v0, 4
+la		$a0, oWon
+syscall
+
+j		newGame
