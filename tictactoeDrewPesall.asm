@@ -132,10 +132,10 @@ spotp:				.byte	 'p'
 playerPiece:		.word	0
 computerPiece:		.word	0
 
-playerWon:			.asciiz		"Congratulations, you won!"	
-computerWon:		.asciiz		"Uh oh, looks like the computer won!"
-xWon:				.asciiz		"X got four in a a row."
-oWon:				.asciiz		"O got four in a row."
+playerWon:			.asciiz		"Congratulations, you won! "	
+computerWon:		.asciiz		"Uh oh, looks like the computer won! "
+xWon:				.asciiz		"X got four in a a row. "
+oWon:				.asciiz		"O got four in a row. "
 gameTie:			.asciiz		"All cells filled: Game results in a tie."
 
 yes:				.byte 	'y'
@@ -830,11 +830,19 @@ li		$v0, 4
 la		$a0, xWon
 syscall
 
+li		$v0, 4
+la		$a0, playerWon
+syscall
+
 j		newGame
 
 winScreenO:
 li		$v0, 4
 la		$a0, oWon
+syscall
+
+li		$v0, 4
+la		$a0, computerWon
 syscall
 
 j		newGame
@@ -1680,6 +1688,10 @@ li		$v0, 4
 la		$a0, xWon
 syscall
 
+li		$v0, 4
+la		$a0, computerWon
+syscall
+
 j		newGame
 
 
@@ -1905,10 +1917,6 @@ j		gameLoopX
 
 winConditionComputerO2:
 
-li		$v0, 4
-la		$a0, madeIt
-syscall
-
 add		$s5, $s5, 1
 lb 		$t1, comb($s5)
 add		$s5, $s5, 1
@@ -1937,10 +1945,6 @@ beq		$t9, 'O', winConditionComputerO3
 j		gameLoopX
 
 winConditionComputerO3:
-
-li		$v0, 4
-la		$a0, madeIt
-syscall
 
 add		$s5, $s5, 1
 lb 		$t1, comb($s5)
@@ -1976,6 +1980,10 @@ syscall
 
 li		$v0, 4
 la		$a0, oWon
+syscall
+
+li		$v0, 4
+la		$a0, computerWon
 syscall
 
 j		newGame
